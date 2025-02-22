@@ -1,185 +1,132 @@
-# backend/models.py
-from pydantic import BaseModel
-from datetime import datetime
+from pydantic import BaseModel, Field
+from datetime import datetime, date
 from typing import Optional
+from uuid import UUID, uuid4
 
-# Reminder models
-class ReminderBase(BaseModel):
-    text: str
-    due_date: datetime
-    completed: bool = False
+# --- 1. User & Authentication ---
 
-class ReminderCreate(ReminderBase):
-    pass
+class User(BaseModel):
+    id: UUID = Field(default_factory=uuid4)
+    email: str
+    name: str
+    password_hash: str
+    notifications_enabled: bool = True
+    stripe_customer_id: Optional[str] = None
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
 
-class Reminder(ReminderBase):
+# Create and Update models for User
+class UserCreate(BaseModel):
+    email: str
+    name: str
+    password: str  # Plaintext password; hash before storing in User.password_hash
+    notifications_enabled: Optional[bool] = True
+    stripe_customer_id: Optional[str] = None
+
+class UserUpdate(BaseModel):
+    email: Optional[str] = None
+    name: Optional[str] = None
+    password: Optional[str] = None  # If updating password; plaintext to be hashed
+    notifications_enabled: Optional[bool] = None
+    stripe_customer_id: Optional[str] = None
+
+
+# --- 2. Payment Details ---
+
+class Payment(BaseModel):
     id: int
-    created_at: str
+    user_id: UUID  # assuming it references User.id
+    stripe_charge_id: str
+    amount: float
+    currency: str
+    payment_status: str  # e.g., "paid", "failed"
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
 
-    class Config:
-        from_attributes = True
+# Create and Update models for Payment
+class PaymentCreate(BaseModel):
+    user_id: UUID
+    stripe_charge_id: str
+    amount: float
+    currency: str
+    payment_status: str
 
-class ReminderUpdate(BaseModel):
-    text: Optional[str] = None
-    due_date: Optional[datetime] = None
+class PaymentUpdate(BaseModel):
+    stripe_charge_id: Optional[str] = None
+    amount: Optional[float] = None
+    currency: Optional[str] = None
+    payment_status: Optional[str] = None
+
+
+# --- 3. Habit Structure ---
+
+class Habit(BaseModel):
+    id: int
+    user_id: UUID  # references User.id
+    name: str
+    description: Optional[str] = None
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+class SubHabit(BaseModel):
+    id: int
+    habit_id: int  # references Habit.id
+    name: str
+    description: Optional[str] = None
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+# Create and Update models for Habit and SubHabit
+class HabitCreate(BaseModel):
+    user_id: UUID
+    name: str
+    description: Optional[str] = None
+
+class HabitUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+
+class SubHabitCreate(BaseModel):
+    habit_id: int
+    name: str
+    description: Optional[str] = None
+
+class SubHabitUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+
+
+# --- 4. Completion & History Tracking ---
+
+class HabitCompletion(BaseModel):
+    id: int
+    user_id: UUID  # redundant but simplifies queries
+    habit_id: int  # references Habit.id
+    date: date  # the day the habit was completed
+    completed: bool
+
+class SubHabitCompletion(BaseModel):
+    id: int
+    user_id: UUID  # redundant but simplifies queries
+    sub_habit_id: int  # references SubHabit.id
+    date: date  # the day the sub-habit was completed
+    completed: bool
+
+# Create and Update models for HabitCompletion and SubHabitCompletion
+class HabitCompletionCreate(BaseModel):
+    user_id: UUID
+    habit_id: int
+    date: date
+    completed: bool
+
+class HabitCompletionUpdate(BaseModel):
     completed: Optional[bool] = None
 
-# User models
-class UserBase(BaseModel):
-    username: str
-    email: str
+class SubHabitCompletionCreate(BaseModel):
+    user_id: UUID
+    sub_habit_id: int
+    date: date
+    completed: bool
 
-class UserCreate(UserBase):
-    password: str
-
-class User(UserBase):
-    id: int
-    created_at: str
-
-    class Config:
-        from_attributes = True
-
-# Model for login (if you want a separate model)
-class Login(BaseModel):
-    email: str
-    password: str
-
-
-# ----------------------------
-# Big Task models
-# ----------------------------
-class BigTaskBase(BaseModel):
-    title: str
-    description: str
-    completion_mode: str  # Expected values: ALL, ANY, or PARTIAL
-
-class BigTaskCreate(BigTaskBase):
-    pass
-
-class BigTask(BigTaskBase):
-    id: int
-    created_at: str
-    updated_at: str
-
-    class Config:
-        from_attributes = True
-
-class BigTaskUpdate(BaseModel):
-    title: Optional[str] = None
-    description: Optional[str] = None
-    completion_mode: Optional[str] = None
-
-# ----------------------------
-# Sub Task models
-# ----------------------------
-class SubTaskBase(BaseModel):
-    big_task_id: int
-    title: str
-    description: str
-    completion_mode: str  # Expected values: FULL or PARTIAL
-
-class SubTaskCreate(SubTaskBase):
-    pass
-
-class SubTask(SubTaskBase):
-    id: int
-    created_at: str
-    updated_at: str
-
-    class Config:
-        from_attributes = True
-
-class SubTaskUpdate(BaseModel):
-    title: Optional[str] = None
-    description: Optional[str] = None
-    completion_mode: Optional[str] = None
-
-# ----------------------------
-# Daily Big Task Status models
-# ----------------------------
-class DailyBigTaskStatusBase(BaseModel):
-    big_task_id: int
-    datetime: datetime
-    completion_value: str  # e.g., "True", "False", or "Partial"
-
-class DailyBigTaskStatusCreate(DailyBigTaskStatusBase):
-    pass
-
-class DailyBigTaskStatus(DailyBigTaskStatusBase):
-    id: int
-    created_at: str
-    updated_at: str
-
-    class Config:
-        from_attributes = True
-
-class DailyBigTaskStatusUpdate(BaseModel):
-    completion_value: Optional[str] = None
-
-# ----------------------------
-# Daily Sub Task Status models
-# ----------------------------
-class DailySubTaskStatusBase(BaseModel):
-    sub_task_id: int
-    datetime: datetime
-    completion_value: str  # e.g., "True", "False", or "Partial"
-
-class DailySubTaskStatusCreate(DailySubTaskStatusBase):
-    pass
-
-class DailySubTaskStatus(DailySubTaskStatusBase):
-    id: int
-    created_at: str
-    updated_at: str
-
-    class Config:
-        from_attributes = True
-
-class DailySubTaskStatusUpdate(BaseModel):
-    completion_value: Optional[str] = None
-
-# ----------------------------
-# Big Task Attribute models
-# ----------------------------
-class BigTaskAttributeBase(BaseModel):
-    big_task_id: int
-    attribute_key: str  # e.g., "Book Name"
-    attribute_value: str  # e.g., "The Great Gatsby"
-
-class BigTaskAttributeCreate(BigTaskAttributeBase):
-    pass
-
-class BigTaskAttribute(BigTaskAttributeBase):
-    id: int
-    created_at: str
-    updated_at: str
-
-    class Config:
-        from_attributes = True
-
-class BigTaskAttributeUpdate(BaseModel):
-    attribute_key: Optional[str] = None
-    attribute_value: Optional[str] = None
-
-# ----------------------------
-# Sub Task Attribute models
-# ----------------------------
-class SubTaskAttributeBase(BaseModel):
-    sub_task_id: int
-    attribute_key: str  # e.g., "pages"
-    attribute_value: str  # e.g., "5"
-
-class SubTaskAttributeCreate(SubTaskAttributeBase):
-    pass
-
-class SubTaskAttribute(SubTaskAttributeBase):
-    id: int
-    created_at: str
-    updated_at: str
-
-    class Config:
-        from_attributes = True
-
-class SubTaskAttributeUpdate(BaseModel):
-    attribute_key: Optional[str] = None
-    attribute_value: Optional[str] = None
+class SubHabitCompletionUpdate(BaseModel):
+    completed: Optional[bool] = None

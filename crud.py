@@ -1,392 +1,310 @@
+import uuid
+from datetime import datetime
 from database import get_db_connection
 
-# User CRUD
-def create_user(username: str, email: str, hashed_password: str):
+# -------------------------
+# Users CRUD Functions
+# -------------------------
+def create_user(email, password_hash, notifications_enabled=1, stripe_customer_id=None):
     conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute(
-        "INSERT INTO users (username, email, hashed_password) VALUES (?, ?, ?)",
-        (username, email, hashed_password)
-    )
+    cur = conn.cursor()
+    user_id = str(uuid.uuid4())
+    timestamp = datetime.utcnow().isoformat() + "Z"
+    cur.execute('''
+        INSERT INTO users (id, email, name,password_hash, notifications_enabled, stripe_customer_id, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    ''', (user_id, email, password_hash, notifications_enabled, stripe_customer_id, timestamp, timestamp))
     conn.commit()
     conn.close()
+    return user_id
 
-def get_user_by_id(user_id: int):
+def get_user_by_id(user_id):
     conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM users WHERE id = ?", (user_id,))
-    user = cursor.fetchone()
+    cur = conn.cursor()
+    cur.execute('SELECT * FROM users WHERE id = ?', (user_id,))
+    user = cur.fetchone()
     conn.close()
     return user
 
-def get_user_by_username(username: str):
+def get_user_by_email(email):
     conn = get_db_connection()
-    user = conn.execute(
-        "SELECT * FROM users WHERE username = ?",
-        (username,)
-    ).fetchone()
+    cur = conn.cursor()
+    cur.execute('SELECT * FROM users WHERE email = ?', (email,))
+    user = cur.fetchone()
     conn.close()
     return user
 
-def get_user_by_email(email: str):
+def update_user(user_id, email=None, password_hash=None, notifications_enabled=None, stripe_customer_id=None):
     conn = get_db_connection()
-    user = conn.execute(
-        "SELECT * FROM users WHERE email = ?",
-        (email,)
-    ).fetchone()
-    conn.close()
-    return user
+    cur = conn.cursor()
+    timestamp = datetime.utcnow().isoformat() + "Z"
+    # Get the existing user record
+    user = get_user_by_id(user_id)
+    if not user:
+        conn.close()
+        return None
+    new_email = email if email is not None else user["email"]
+    new_password_hash = password_hash if password_hash is not None else user["password_hash"]
+    new_notifications_enabled = notifications_enabled if notifications_enabled is not None else user["notifications_enabled"]
+    new_stripe_customer_id = stripe_customer_id if stripe_customer_id is not None else user["stripe_customer_id"]
 
-def update_user(user_id: int, username: str = None, email: str = None, hashed_password: str = None):
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    fields = []
-    values = []
-    if username is not None:
-        fields.append("username = ?")
-        values.append(username)
-    if email is not None:
-        fields.append("email = ?")
-        values.append(email)
-    if hashed_password is not None:
-        fields.append("hashed_password = ?")
-        values.append(hashed_password)
-    values.append(user_id)
-    cursor.execute(f"UPDATE users SET {', '.join(fields)} WHERE id = ?", values)
+    cur.execute('''
+        UPDATE users
+        SET email = ?, password_hash = ?, notifications_enabled = ?, stripe_customer_id = ?, updated_at = ?
+        WHERE id = ?
+    ''', (new_email, new_password_hash, new_notifications_enabled, new_stripe_customer_id, timestamp, user_id))
     conn.commit()
     conn.close()
+    return get_user_by_id(user_id)
 
-def delete_user(user_id: int):
+def delete_user(user_id):
     conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("DELETE FROM users WHERE id = ?", (user_id,))
+    cur = conn.cursor()
+    cur.execute('DELETE FROM users WHERE id = ?', (user_id,))
     conn.commit()
     conn.close()
+    return True
 
-
-# ----------------------------
-# Reminders CRUD
-# ----------------------------
-def create_reminder(text: str, due_date: str, completed: bool, user_id: int):
+# -------------------------
+# Payments CRUD Functions
+# -------------------------
+def create_payment(user_id, stripe_charge_id, amount, currency, payment_status):
     conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute(
-        "INSERT INTO reminders (text, due_date, completed, user_id) VALUES (?, ?, ?, ?)",
-        (text, due_date, completed, user_id)
-    )
+    cur = conn.cursor()
+    timestamp = datetime.utcnow().isoformat() + "Z"
+    cur.execute('''
+        INSERT INTO payments (user_id, stripe_charge_id, amount, currency, payment_status, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    ''', (user_id, stripe_charge_id, amount, currency, payment_status, timestamp, timestamp))
+    conn.commit()
+    payment_id = cur.lastrowid
+    conn.close()
+    return payment_id
+
+def get_payment_by_id(payment_id):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute('SELECT * FROM payments WHERE id = ?', (payment_id,))
+    payment = cur.fetchone()
+    conn.close()
+    return payment
+
+def update_payment(payment_id, stripe_charge_id=None, amount=None, currency=None, payment_status=None):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    timestamp = datetime.utcnow().isoformat() + "Z"
+    payment = get_payment_by_id(payment_id)
+    if not payment:
+        conn.close()
+        return None
+    new_stripe_charge_id = stripe_charge_id if stripe_charge_id is not None else payment["stripe_charge_id"]
+    new_amount = amount if amount is not None else payment["amount"]
+    new_currency = currency if currency is not None else payment["currency"]
+    new_payment_status = payment_status if payment_status is not None else payment["payment_status"]
+
+    cur.execute('''
+        UPDATE payments
+        SET stripe_charge_id = ?, amount = ?, currency = ?, payment_status = ?, updated_at = ?
+        WHERE id = ?
+    ''', (new_stripe_charge_id, new_amount, new_currency, new_payment_status, timestamp, payment_id))
     conn.commit()
     conn.close()
+    return get_payment_by_id(payment_id)
 
-def get_reminder_by_id(reminder_id: int):
+def delete_payment(payment_id):
     conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM reminders WHERE id = ?", (reminder_id,))
-    reminder = cursor.fetchone()
-    conn.close()
-    return reminder
-
-def get_reminders_by_user(user_id: int):
-    conn = get_db_connection()
-    reminders = conn.execute(
-        "SELECT * FROM reminders WHERE user_id = ? ORDER BY id DESC",
-        (user_id,)
-    ).fetchall()
-    conn.close()
-    return reminders
-
-def update_reminder(reminder_id: int, text: str = None, due_date: str = None, completed: bool = None):
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    fields = []
-    values = []
-    if text is not None:
-        fields.append("text = ?")
-        values.append(text)
-    if due_date is not None:
-        fields.append("due_date = ?")
-        values.append(due_date)
-    if completed is not None:
-        fields.append("completed = ?")
-        values.append(completed)
-    values.append(reminder_id)
-    cursor.execute(f"UPDATE reminders SET {', '.join(fields)} WHERE id = ?", values)
+    cur = conn.cursor()
+    cur.execute('DELETE FROM payments WHERE id = ?', (payment_id,))
     conn.commit()
     conn.close()
+    return True
 
-def delete_reminder(reminder_id: int):
+# -------------------------
+# Habits CRUD Functions
+# -------------------------
+def create_habit(user_id, name, description=None):
     conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("DELETE FROM reminders WHERE id = ?", (reminder_id,))
+    cur = conn.cursor()
+    timestamp = datetime.utcnow().isoformat() + "Z"
+    cur.execute('''
+        INSERT INTO habits (user_id, name, description, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?)
+    ''', (user_id, name, description, timestamp, timestamp))
+    conn.commit()
+    habit_id = cur.lastrowid
+    conn.close()
+    return habit_id
+
+def get_habit_by_id(habit_id):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute('SELECT * FROM habits WHERE id = ?', (habit_id,))
+    habit = cur.fetchone()
+    conn.close()
+    return habit
+
+def update_habit(habit_id, name=None, description=None):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    timestamp = datetime.utcnow().isoformat() + "Z"
+    habit = get_habit_by_id(habit_id)
+    if not habit:
+        conn.close()
+        return None
+    new_name = name if name is not None else habit["name"]
+    new_description = description if description is not None else habit["description"]
+
+    cur.execute('''
+        UPDATE habits
+        SET name = ?, description = ?, updated_at = ?
+        WHERE id = ?
+    ''', (new_name, new_description, timestamp, habit_id))
     conn.commit()
     conn.close()
+    return get_habit_by_id(habit_id)
 
-# ----------------------------
-# Big Tasks CRUD
-# ----------------------------
-def create_big_task(title: str, description: str, completion_mode: str, user_id: int):
+def delete_habit(habit_id):
     conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute(
-        "INSERT INTO big_tasks (title, description, completion_mode, user_id) VALUES (?, ?, ?, ?)",
-        (title, description, completion_mode, user_id)
-    )
+    cur = conn.cursor()
+    cur.execute('DELETE FROM habits WHERE id = ?', (habit_id,))
     conn.commit()
     conn.close()
+    return True
 
-def get_big_task_by_id(big_task_id: int):
+# -------------------------
+# Sub-Habits CRUD Functions
+# -------------------------
+def create_sub_habit(habit_id, name, description=None):
     conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM big_tasks WHERE id = ?", (big_task_id,))
-    task = cursor.fetchone()
+    cur = conn.cursor()
+    timestamp = datetime.utcnow().isoformat() + "Z"
+    cur.execute('''
+        INSERT INTO sub_habits (habit_id, name, description, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?)
+    ''', (habit_id, name, description, timestamp, timestamp))
+    conn.commit()
+    sub_habit_id = cur.lastrowid
     conn.close()
-    return task
+    return sub_habit_id
 
-def update_big_task(big_task_id: int, title: str = None, description: str = None, completion_mode: str = None, user_id: int = None):
+def get_sub_habit_by_id(sub_habit_id):
     conn = get_db_connection()
-    cursor = conn.cursor()
-    fields = []
-    values = []
-    if title is not None:
-        fields.append("title = ?")
-        values.append(title)
-    if description is not None:
-        fields.append("description = ?")
-        values.append(description)
-    if completion_mode is not None:
-        fields.append("completion_mode = ?")
-        values.append(completion_mode)
-    if user_id is not None:
-        fields.append("user_id = ?")
-        values.append(user_id)
-    values.append(big_task_id)
-    cursor.execute(f"UPDATE big_tasks SET {', '.join(fields)}, updated_at = CURRENT_TIMESTAMP WHERE id = ?", values)
+    cur = conn.cursor()
+    cur.execute('SELECT * FROM sub_habits WHERE id = ?', (sub_habit_id,))
+    sub_habit = cur.fetchone()
+    conn.close()
+    return sub_habit
+
+def update_sub_habit(sub_habit_id, name=None, description=None):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    timestamp = datetime.utcnow().isoformat() + "Z"
+    sub_habit = get_sub_habit_by_id(sub_habit_id)
+    if not sub_habit:
+        conn.close()
+        return None
+    new_name = name if name is not None else sub_habit["name"]
+    new_description = description if description is not None else sub_habit["description"]
+
+    cur.execute('''
+        UPDATE sub_habits
+        SET name = ?, description = ?, updated_at = ?
+        WHERE id = ?
+    ''', (new_name, new_description, timestamp, sub_habit_id))
     conn.commit()
     conn.close()
+    return get_sub_habit_by_id(sub_habit_id)
 
-def delete_big_task(big_task_id: int):
+def delete_sub_habit(sub_habit_id):
     conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("DELETE FROM big_tasks WHERE id = ?", (big_task_id,))
+    cur = conn.cursor()
+    cur.execute('DELETE FROM sub_habits WHERE id = ?', (sub_habit_id,))
     conn.commit()
     conn.close()
+    return True
 
-
-# ----------------------------
-# Sub Tasks CRUD
-# ----------------------------
-def create_sub_task(big_task_id: int, title: str, description: str, completion_mode: str, user_id: int):
+# -------------------------
+# Habit Completions CRUD Functions
+# -------------------------
+def create_habit_completion(user_id, habit_id, date_str, completed):
     conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute(
-        "INSERT INTO sub_tasks (big_task_id, title, description, completion_mode, user_id) VALUES (?, ?, ?, ?, ?)",
-        (big_task_id, title, description, completion_mode, user_id)
-    )
+    cur = conn.cursor()
+    cur.execute('''
+        INSERT INTO habit_completions (user_id, habit_id, date, completed)
+        VALUES (?, ?, ?, ?)
+    ''', (user_id, habit_id, date_str, 1 if completed else 0))
+    conn.commit()
+    completion_id = cur.lastrowid
+    conn.close()
+    return completion_id
+
+def get_habit_completion_by_id(completion_id):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute('SELECT * FROM habit_completions WHERE id = ?', (completion_id,))
+    record = cur.fetchone()
+    conn.close()
+    return record
+
+def update_habit_completion(completion_id, completed):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute('''
+        UPDATE habit_completions
+        SET completed = ?
+        WHERE id = ?
+    ''', (1 if completed else 0, completion_id))
     conn.commit()
     conn.close()
+    return get_habit_completion_by_id(completion_id)
 
-def get_sub_task_by_id(sub_task_id: int):
+def delete_habit_completion(completion_id):
     conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM sub_tasks WHERE id = ?", (sub_task_id,))
-    task = cursor.fetchone()
-    conn.close()
-    return task
-
-def update_sub_task(sub_task_id: int, title: str = None, description: str = None, completion_mode: str = None, user_id: int = None):
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    fields = []
-    values = []
-    if title is not None:
-        fields.append("title = ?")
-        values.append(title)
-    if description is not None:
-        fields.append("description = ?")
-        values.append(description)
-    if completion_mode is not None:
-        fields.append("completion_mode = ?")
-        values.append(completion_mode)
-    if user_id is not None:
-        fields.append("user_id = ?")
-        values.append(user_id)
-    values.append(sub_task_id)
-    cursor.execute(f"UPDATE sub_tasks SET {', '.join(fields)}, updated_at = CURRENT_TIMESTAMP WHERE id = ?", values)
+    cur = conn.cursor()
+    cur.execute('DELETE FROM habit_completions WHERE id = ?', (completion_id,))
     conn.commit()
     conn.close()
+    return True
 
-def delete_sub_task(sub_task_id: int):
+# -------------------------
+# Sub-Habit Completions CRUD Functions
+# -------------------------
+def create_sub_habit_completion(sub_habit_id, date_str, completed, user_id=None):
     conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("DELETE FROM sub_tasks WHERE id = ?", (sub_task_id,))
+    cur = conn.cursor()
+    cur.execute('''
+        INSERT INTO sub_habit_completions (sub_habit_id, date, completed, user_id)
+        VALUES (?, ?, ?, ?)
+    ''', (sub_habit_id, date_str, 1 if completed else 0, user_id))
+    conn.commit()
+    completion_id = cur.lastrowid
+    conn.close()
+    return completion_id
+
+def get_sub_habit_completion_by_id(completion_id):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute('SELECT * FROM sub_habit_completions WHERE id = ?', (completion_id,))
+    record = cur.fetchone()
+    conn.close()
+    return record
+
+def update_sub_habit_completion(completion_id, completed):
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute('''
+        UPDATE sub_habit_completions
+        SET completed = ?
+        WHERE id = ?
+    ''', (1 if completed else 0, completion_id))
     conn.commit()
     conn.close()
+    return get_sub_habit_completion_by_id(completion_id)
 
-
-# ----------------------------
-# Daily Big Task Status CRUD
-# ----------------------------
-def create_daily_big_task_status(big_task_id: int, user_id: int, date: str, completion_value: str):
+def delete_sub_habit_completion(completion_id):
     conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute(
-        "INSERT INTO daily_big_task_status (big_task_id, user_id, date, completion_value) VALUES (?, ?, ?, ?)",
-        (big_task_id, user_id, date, completion_value)
-    )
+    cur = conn.cursor()
+    cur.execute('DELETE FROM sub_habit_completions WHERE id = ?', (completion_id,))
     conn.commit()
     conn.close()
-
-def get_daily_big_task_status_by_id(status_id: int):
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM daily_big_task_status WHERE id = ?", (status_id,))
-    status = cursor.fetchone()
-    conn.close()
-    return status
-
-def update_daily_big_task_status(status_id: int, completion_value: str = None):
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    if completion_value is not None:
-        cursor.execute(
-            "UPDATE daily_big_task_status SET completion_value = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
-            (completion_value, status_id)
-        )
-    conn.commit()
-    conn.close()
-
-def delete_daily_big_task_status(status_id: int):
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("DELETE FROM daily_big_task_status WHERE id = ?", (status_id,))
-    conn.commit()
-    conn.close()
-
-
-# ----------------------------
-# Daily Sub Task Status CRUD
-# ----------------------------
-def create_daily_sub_task_status(sub_task_id: int, user_id: int, date: str, completion_value: str):
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute(
-        "INSERT INTO daily_sub_task_status (sub_task_id, user_id, date, completion_value) VALUES (?, ?, ?, ?)",
-        (sub_task_id, user_id, date, completion_value)
-    )
-    conn.commit()
-    conn.close()
-
-def get_daily_sub_task_status_by_id(status_id: int):
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM daily_sub_task_status WHERE id = ?", (status_id,))
-    status = cursor.fetchone()
-    conn.close()
-    return status
-
-def update_daily_sub_task_status(status_id: int, completion_value: str = None):
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    if completion_value is not None:
-        cursor.execute(
-            "UPDATE daily_sub_task_status SET completion_value = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
-            (completion_value, status_id)
-        )
-    conn.commit()
-    conn.close()
-
-def delete_daily_sub_task_status(status_id: int):
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("DELETE FROM daily_sub_task_status WHERE id = ?", (status_id,))
-    conn.commit()
-    conn.close()
-
-
-# ----------------------------
-# Big Task Attributes CRUD
-# ----------------------------
-def create_big_task_attribute(big_task_id: int, user_id: int, attribute_key: str, attribute_value: str):
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute(
-        "INSERT INTO big_task_attributes (big_task_id, user_id, attribute_key, attribute_value) VALUES (?, ?, ?, ?)",
-        (big_task_id, user_id, attribute_key, attribute_value)
-    )
-    conn.commit()
-    conn.close()
-
-def get_big_task_attribute_by_id(attribute_id: int):
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM big_task_attributes WHERE id = ?", (attribute_id,))
-    attribute = cursor.fetchone()
-    conn.close()
-    return attribute
-
-def update_big_task_attribute(attribute_id: int, attribute_key: str = None, attribute_value: str = None):
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    fields = []
-    values = []
-    if attribute_key is not None:
-        fields.append("attribute_key = ?")
-        values.append(attribute_key)
-    if attribute_value is not None:
-        fields.append("attribute_value = ?")
-        values.append(attribute_value)
-    values.append(attribute_id)
-    cursor.execute(f"UPDATE big_task_attributes SET {', '.join(fields)}, updated_at = CURRENT_TIMESTAMP WHERE id = ?", values)
-    conn.commit()
-    conn.close()
-
-def delete_big_task_attribute(attribute_id: int):
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("DELETE FROM big_task_attributes WHERE id = ?", (attribute_id,))
-    conn.commit()
-    conn.close()
-
-
-# ----------------------------
-# Sub Task Attributes CRUD
-# ----------------------------
-def create_sub_task_attribute(sub_task_id: int, user_id: int, attribute_key: str, attribute_value: str):
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute(
-        "INSERT INTO sub_task_attributes (sub_task_id, user_id, attribute_key, attribute_value) VALUES (?, ?, ?, ?)",
-        (sub_task_id, user_id, attribute_key, attribute_value)
-    )
-    conn.commit()
-    conn.close()
-
-def get_sub_task_attribute_by_id(attribute_id: int):
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM sub_task_attributes WHERE id = ?", (attribute_id,))
-    attribute = cursor.fetchone()
-    conn.close()
-    return attribute
-
-def update_sub_task_attribute(attribute_id: int, attribute_key: str = None, attribute_value: str = None):
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    fields = []
-    values = []
-    if attribute_key is not None:
-        fields.append("attribute_key = ?")
-        values.append(attribute_key)
-    if attribute_value is not None:
-        fields.append("attribute_value = ?")
-        values.append(attribute_value)
-    values.append(attribute_id)
-    cursor.execute(f"UPDATE sub_task_attributes SET {', '.join(fields)}, updated_at = CURRENT_TIMESTAMP WHERE id = ?", values)
-    conn.commit()
-    conn.close()
-
-def delete_sub_task_attribute(attribute_id: int):
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("DELETE FROM sub_task_attributes WHERE id = ?", (attribute_id,))
-    conn.commit()
-    conn.close()
+    return True

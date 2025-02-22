@@ -2,7 +2,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from database import init_db
-from routes import auth, reminders, big_tasks, sub_tasks, daily_big_task_status, daily_sub_task_status, big_task_attributes, sub_task_attributes
+from old_routes import auth, reminders, big_tasks, sub_tasks, daily_big_task_status, daily_sub_task_status, big_task_attributes, sub_task_attributes
 
 app = FastAPI()
 
