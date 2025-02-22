@@ -2,7 +2,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from database import init_db
-from old_routes import auth, reminders, big_tasks, sub_tasks, daily_big_task_status, daily_sub_task_status, big_task_attributes, sub_task_attributes
+from routes import auth, users, payments, habits, completions
 
 app = FastAPI()
 
@@ -19,14 +19,12 @@ app.add_middleware(
 init_db()
 
 # Routers
-app.include_router(big_tasks.router, prefix="/api")
-app.include_router(sub_tasks.router, prefix="/api")
-app.include_router(daily_big_task_status.router, prefix="/api")
-app.include_router(daily_sub_task_status.router, prefix="/api")
-app.include_router(big_task_attributes.router, prefix="/api")
-app.include_router(sub_task_attributes.router, prefix="/api")
-app.include_router(reminders.router, prefix="/reminders", tags=["Reminders"])
-app.include_router(auth.router, prefix="/auth", tags=["Auth"])
+app.include_router(auth.router, prefix="/auth", tags=["auth"])
+app.include_router(users.router, prefix="/users", tags=["users"])
+app.include_router(payments.router, prefix="/payments", tags=["payments"])
+app.include_router(habits.router, prefix="/habits", tags=["habits"])
+app.include_router(completions.router, prefix="/completions", tags=["completions"])
+
 
 # Dead root endpoint: returns a default message indicating there's no content.
 @app.get("/")
