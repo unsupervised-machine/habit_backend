@@ -1,10 +1,19 @@
 # users.py
-from fastapi import APIRouter, HTTPException
-from models import UserUpdate
+from fastapi import APIRouter, HTTPException, status
+from models import UserUpdate, User
+from routes.auth import get_password_hash
 import crud
 
 router = APIRouter()
 
+@router.post(path="", response_description="Create a new user.", status_code=status.HTTP_201_CREATED, response_model=dict)
+def create_user(email, name, password):
+    try:
+        hashed_password = get_password_hash(password)
+        user_id = crud.create_user(email=email, name=name, password_hash=hashed_password)
+        return {"message": "User created successfully", "user_id": user_id}
+    except Exception as e:
+        return {"message": str(e)}
 
 @router.get("/users/{user_id}")
 def get_user(user_id: str):

@@ -5,15 +5,15 @@ from database import get_db_connection
 # -------------------------
 # Users CRUD Functions
 # -------------------------
-def create_user(email, password_hash, notifications_enabled=1, stripe_customer_id=None):
+def create_user(email, name, password_hash, notifications_enabled=1, stripe_customer_id=None):
     conn = get_db_connection()
     cur = conn.cursor()
     user_id = str(uuid.uuid4())
     timestamp = datetime.utcnow().isoformat() + "Z"
     cur.execute('''
-        INSERT INTO users (id, email, name,password_hash, notifications_enabled, stripe_customer_id, created_at, updated_at)
+        INSERT INTO users (id, email, name, password_hash, notifications_enabled, stripe_customer_id, created_at, updated_at)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    ''', (user_id, email, password_hash, notifications_enabled, stripe_customer_id, timestamp, timestamp))
+    ''', (user_id, email, name, password_hash, notifications_enabled, stripe_customer_id, timestamp, timestamp))
     conn.commit()
     conn.close()
     return user_id
@@ -75,7 +75,7 @@ def create_payment(user_id, stripe_charge_id, amount, currency, payment_status):
     cur.execute('''
         INSERT INTO payments (user_id, stripe_charge_id, amount, currency, payment_status, created_at, updated_at)
         VALUES (?, ?, ?, ?, ?, ?, ?)
-    ''', (user_id, stripe_charge_id, amount, currency, payment_status, timestamp, timestamp))
+    ''', (str(user_id), stripe_charge_id, amount, currency, payment_status, timestamp, timestamp))
     conn.commit()
     payment_id = cur.lastrowid
     conn.close()
@@ -89,27 +89,27 @@ def get_payment_by_id(payment_id):
     conn.close()
     return payment
 
-def update_payment(payment_id, stripe_charge_id=None, amount=None, currency=None, payment_status=None):
-    conn = get_db_connection()
-    cur = conn.cursor()
-    timestamp = datetime.utcnow().isoformat() + "Z"
-    payment = get_payment_by_id(payment_id)
-    if not payment:
-        conn.close()
-        return None
-    new_stripe_charge_id = stripe_charge_id if stripe_charge_id is not None else payment["stripe_charge_id"]
-    new_amount = amount if amount is not None else payment["amount"]
-    new_currency = currency if currency is not None else payment["currency"]
-    new_payment_status = payment_status if payment_status is not None else payment["payment_status"]
-
-    cur.execute('''
-        UPDATE payments
-        SET stripe_charge_id = ?, amount = ?, currency = ?, payment_status = ?, updated_at = ?
-        WHERE id = ?
-    ''', (new_stripe_charge_id, new_amount, new_currency, new_payment_status, timestamp, payment_id))
-    conn.commit()
-    conn.close()
-    return get_payment_by_id(payment_id)
+# def update_payment(payment_id, stripe_charge_id=None, amount=None, currency=None, payment_status=None):
+#     conn = get_db_connection()
+#     cur = conn.cursor()
+#     timestamp = datetime.utcnow().isoformat() + "Z"
+#     payment = get_payment_by_id(payment_id)
+#     if not payment:
+#         conn.close()
+#         return None
+#     new_stripe_charge_id = stripe_charge_id if stripe_charge_id is not None else payment["stripe_charge_id"]
+#     new_amount = amount if amount is not None else payment["amount"]
+#     new_currency = currency if currency is not None else payment["currency"]
+#     new_payment_status = payment_status if payment_status is not None else payment["payment_status"]
+#
+#     cur.execute('''
+#         UPDATE payments
+#         SET stripe_charge_id = ?, amount = ?, currency = ?, payment_status = ?, updated_at = ?
+#         WHERE id = ?
+#     ''', (new_stripe_charge_id, new_amount, new_currency, new_payment_status, timestamp, payment_id))
+#     conn.commit()
+#     conn.close()
+#     return get_payment_by_id(payment_id)
 
 def delete_payment(payment_id):
     conn = get_db_connection()
@@ -129,7 +129,7 @@ def create_habit(user_id, name, description=None):
     cur.execute('''
         INSERT INTO habits (user_id, name, description, created_at, updated_at)
         VALUES (?, ?, ?, ?, ?)
-    ''', (user_id, name, description, timestamp, timestamp))
+    ''', (str(user_id), name, description, timestamp, timestamp))
     conn.commit()
     habit_id = cur.lastrowid
     conn.close()
@@ -232,7 +232,7 @@ def create_habit_completion(user_id, habit_id, date_str, completed):
     cur.execute('''
         INSERT INTO habit_completions (user_id, habit_id, date, completed)
         VALUES (?, ?, ?, ?)
-    ''', (user_id, habit_id, date_str, 1 if completed else 0))
+    ''', (str(user_id), habit_id, date_str, 1 if completed else 0))
     conn.commit()
     completion_id = cur.lastrowid
     conn.close()
@@ -275,7 +275,7 @@ def create_sub_habit_completion(sub_habit_id, date_str, completed, user_id=None)
     cur.execute('''
         INSERT INTO sub_habit_completions (sub_habit_id, date, completed, user_id)
         VALUES (?, ?, ?, ?)
-    ''', (sub_habit_id, date_str, 1 if completed else 0, user_id))
+    ''', (sub_habit_id, date_str, 1 if completed else 0, str(user_id)))
     conn.commit()
     completion_id = cur.lastrowid
     conn.close()

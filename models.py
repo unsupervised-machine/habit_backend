@@ -51,11 +51,11 @@ class PaymentCreate(BaseModel):
     currency: str
     payment_status: str
 
-class PaymentUpdate(BaseModel):
-    stripe_charge_id: Optional[str] = None
-    amount: Optional[float] = None
-    currency: Optional[str] = None
-    payment_status: Optional[str] = None
+# class PaymentUpdate(BaseModel):
+#     stripe_charge_id: Optional[str] = None
+#     amount: Optional[float] = None
+#     currency: Optional[str] = None
+#     payment_status: Optional[str] = None
 
 
 # --- 3. Habit Structure ---
