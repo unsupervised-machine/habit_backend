@@ -1,3 +1,5 @@
+from pprint import pprint
+
 from fastapi import APIRouter, status
 
 from models import Habit, HabitCreate, HabitUpdate
@@ -13,13 +15,13 @@ def create_habit_route(habit: HabitCreate):
     return result
 
 
-@router.get(path="/{habit_id}", response_description="Retrieve habit details by habit_id.", status_code=status.HTTP_200_OK, response_model=Habit)
+@router.get(path="/{habit_id}", response_description="Retrieve habit details by habit_id.", status_code=status.HTTP_200_OK, response_model=dict)
 def get_habit_route(habit_id: str):
     result = get_habit(habit_id)
     return result
 
 
-@router.patch(path="/{habit_id}", response_description="Update habit details by habit_id.", status_code=status.HTTP_200_OK, response_model=Habit)
+@router.patch(path="/{habit_id}", response_description="Update habit details by habit_id.", status_code=status.HTTP_200_OK, response_model=dict)
 def update_habit_route(habit_id: str, habit_update: HabitUpdate):
     result = update_habit(habit_id, habit_update)
     return result

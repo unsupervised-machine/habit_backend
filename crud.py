@@ -76,15 +76,14 @@ def create_habit(habit: HabitCreate):
     habit_data = jsonable_encoder(habit)
 
     # Find the current highest sort_index
-    max_sort_index = users_collection.find_one(
+    max_sort_index = habits_collection.find_one(
         filter={"user_id": habit_data["user_id"]},
         sort=[("sort_index", DESCENDING)],
         projection={"sort_index": 1}
     )
-
     # Determine new sort_index
-    highest_sort_index = max_sort_index["sort_index"] if max_sort_index else 0
-    habit_data.sort_index = highest_sort_index + 1  # Ensure it's the highest
+    highest_sort_index = max_sort_index.get("sort_index", 0) if max_sort_index else 0
+    habit_data["sort_index"] = highest_sort_index + 1  # Ensure it's the highest
 
     try:
         result = habits_collection.insert_one(habit_data)
@@ -110,10 +109,11 @@ def get_user_habits(user_id: str):
 
 def get_habit(habit_id: str):
     try:
-        habit = habits_collection.find(
-            filter={"habit_id": habit_id},
-            sort=[("sort_index", DESCENDING)],
+        habit = habits_collection.find_one(
+            filter={"_id": habit_id},
+            # sort=[("sort_index", DESCENDING)],
         )
+        pprint(habit)
         return jsonable_encoder(habit)
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
