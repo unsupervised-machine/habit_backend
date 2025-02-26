@@ -1,4 +1,4 @@
-from fastapi import APIRouter, status
+from fastapi import APIRouter, status, Response
 
 from models import User, UserCreate, UserUpdate
 from crud import create_user, get_user, update_user, delete_user
@@ -13,12 +13,12 @@ def create_user_route(user: UserCreate):
     result = create_user(user)
     return result
 
-@router.get(path="/{user_id}", response_description="Retrieve user details by user_id.", response_model=User, status_code=status.HTTP_200_OK )
+@router.get(path="/{user_id}", response_description="Retrieve user details by user_id.", response_model=dict, status_code=status.HTTP_200_OK )
 def get_user_route(user_id: str):
     result = get_user(user_id)
     return result
 
-@router.patch(path="/{user_id}", response_description="Update user details by user_id.", response_model=User, status_code=status.HTTP_200_OK)
+@router.patch(path="/{user_id}", response_description="Update user details by user_id.", response_model=dict, status_code=status.HTTP_200_OK)
 def update_user_route(user_id: str, user: UserUpdate):
     result = update_user(user_id, user)
     return result

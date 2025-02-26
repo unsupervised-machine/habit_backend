@@ -3,10 +3,15 @@ from datetime import datetime
 from datetime import date as _date
 from typing import Optional
 from pydantic import BaseModel, Field, EmailStr
+from bson import ObjectId
+
+
+def object_id_str(value: ObjectId) -> str:
+    return str(value)
 
 
 class User(BaseModel):
-    id: str = Field(default_factory=lambda: str(uuid.uuid4()), alias="_id")
+    id: str = Field(default_factory=uuid.uuid4, alias="_id")
     first_name: str = Field(...)
     last_name: str = Field(...)
     email: EmailStr = Field(...)
@@ -26,12 +31,14 @@ class User(BaseModel):
 
 
 class UserCreate(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()), alias="_id")
     first_name: str
     last_name: str
     email: EmailStr
     password: str  # Accepts raw password from user input
 
     class Config:
+        populate_by_name = True
         json_schema_extra = {
             "example": {
                 "first_name": "Jon",
@@ -96,6 +103,7 @@ class Habit(BaseModel):
 
 
 class HabitCreate(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()), alias="_id")
     user_id: str
     name: str
     description: Optional[str] = None
@@ -172,6 +180,7 @@ class Completion(BaseModel):
 
 
 class CompletionCreate(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()), alias="_id")
     habit_id: str
     user_id: str
     date: _date
