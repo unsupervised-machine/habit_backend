@@ -13,13 +13,13 @@ def create_completion_route(completion: CompletionCreate):
     return result
 
 
-@router.get(path="/{completion_id}", response_description="Retrieve completion details by completion_id.", status_code=status.HTTP_200_OK, response_model=Completion)
+@router.get(path="/{completion_id}", response_description="Retrieve completion details by completion_id.", status_code=status.HTTP_200_OK, response_model=dict)
 def get_completion_route(completion_id: str):
     result = get_completion(completion_id)
     return result
 
 
-@router.patch(path="/{completion_id}", response_description="Update completion details by completion_id.", status_code=status.HTTP_200_OK, response_model=Completion)
+@router.patch(path="/{completion_id}", response_description="Update completion details by completion_id.", status_code=status.HTTP_200_OK, response_model=dict)
 def update_completion_route(completion_id: str, completion: CompletionUpdate):
     result = update_completion(completion_id, completion)
     return result

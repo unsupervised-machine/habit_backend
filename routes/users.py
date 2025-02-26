@@ -29,13 +29,13 @@ def delete_user_route(user_id: str):
     return result
 
 
-@router.get(path="/{user_id}/habits", response_description="Get all habits associated with a user_id.", status_code=status.HTTP_200_OK, response_model=dict)
+@router.get(path="/{user_id}/habits", response_description="Get all habits associated with a user_id.", status_code=status.HTTP_200_OK, response_model=list)
 def get_user_habits_route(user_id: str):
     result = get_user_habits(user_id)
     return result
 
 
-@router.get(path="/{user_id}/habits/{habit_id}", response_description="Get all user habit completions by user_id and habit_id.", status_code=status.HTTP_200_OK, response_model=dict)
+@router.get(path="/{user_id}/habits/{habit_id}", response_description="Get all user habit completions by user_id and habit_id.", status_code=status.HTTP_200_OK, response_model=list)
 def get_user_habit_completions_route(user_id: str, habit_id: str):
     result = get_user_habit_completions(user_id, habit_id)
     return result
@@ -43,5 +43,5 @@ def get_user_habit_completions_route(user_id: str, habit_id: str):
 
 @router.get(path="/{user_id}/habits/{habit_id}/completion_streak", response_description="Get current streak for user habit.", status_code=status.HTTP_200_OK, response_model=dict)
 def get_user_habit_completion_streak_route(user_id: str, habit_id: str):
-    result = get_user_habit_completions(user_id, habit_id)
+    result = get_user_habit_completion_streak(user_id, habit_id)
     return result

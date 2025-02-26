@@ -5,7 +5,7 @@ from fastapi.encoders import jsonable_encoder
 from pymongo import DESCENDING, UpdateOne
 from pymongo.errors import DuplicateKeyError
 from datetime import date as _date
-from datetime import timedelta
+from datetime import timedelta, datetime
 
 from db import users_collection, habits_collection, completions_collection
 from models import UserCreate, UserUpdate
@@ -96,12 +96,13 @@ def create_habit(habit: HabitCreate):
 
 
 def get_user_habits(user_id: str):
+    # Returns list of dict objects
     try:
         habits = habits_collection.find(
             filter={"user_id": user_id},
             sort=[("sort_index", DESCENDING)],
         )
-        return jsonable_encoder(habits)
+        return list(habits)
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="An error occurred while fetching the user's habits.")
 
@@ -113,7 +114,6 @@ def get_habit(habit_id: str):
             filter={"_id": habit_id},
             # sort=[("sort_index", DESCENDING)],
         )
-        pprint(habit)
         return jsonable_encoder(habit)
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -163,9 +163,9 @@ def create_completion(completion: CompletionCreate):
 
 def get_completion(completion_id: str):
     try:
-        completion = completions_collection.find(
-            filter={"completion_id": completion_id},
-            sort=[("sort_index", DESCENDING)],
+        completion = completions_collection.find_one(
+            filter={"_id": completion_id},
+            # sort=[("sort_index", DESCENDING)],
         )
         return jsonable_encoder(completion)
     except Exception as e:
@@ -175,14 +175,16 @@ def get_completion(completion_id: str):
 
 def update_completion(completion_id: str, completion: CompletionUpdate):
     update_data = completion.model_dump(exclude_unset=True)
+    pprint(update_data)
     if not update_data:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No update data provided.")
 
     try:
         result = completions_collection.update_one({"_id": completion_id}, {"$set": update_data})
+        pprint(result)
         if result.matched_count == 0:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Completion not found.")
-        return habits_collection.find_one({"_id": completion_id})
+        return completions_collection.find_one({"_id": completion_id})
 
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -191,11 +193,13 @@ def update_completion(completion_id: str, completion: CompletionUpdate):
 
 def get_user_habit_completions(user_id: str, habit_id: str):
     try:
+        # need to convert Cursor object to list
         completions = completions_collection.find(
             filter={"habit_id": habit_id, "user_id": user_id},
             sort=[("date", DESCENDING)],
         )
-        return jsonable_encoder(completions)
+
+        return list(completions)
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                             detail="An error occurred while fetching the completions.")
@@ -206,16 +210,22 @@ def get_user_habit_completion_streak(user_id: str, habit_id: str):
         today = _date.today()  # Get today's date (date object)
 
         # Fetch completions sorted by date (most recent first)
+        pprint(user_id)
+        pprint(habit_id)
         completions = completions_collection.find(
             {"habit_id": habit_id, "user_id": user_id, "completed": True},
             sort=[("date", DESCENDING)]
         )
+        pprint(completions)
 
         streak = 0
         expected_date = today  # Start checking from today
 
         for completion in completions:
+            pprint(completion)
             completion_date = completion["date"]
+            if isinstance(completion_date, str):
+                completion_date = datetime.strptime(completion_date, "%Y-%m-%d").date()
 
             if completion_date == expected_date:
                 streak += 1
@@ -237,6 +247,7 @@ def prepare_completions():
     # If a completion for today doesn’t exist, it creates a new one.
     try:
         today = _date.today()  # Get today's date
+        today_datetime = datetime.now()
 
         # Fetch all habits
         habits = habits_collection.find({}, {"_id": 1, "user_id": 1})
@@ -250,7 +261,7 @@ def prepare_completions():
             # Upsert: Insert if not exists
             bulk_operations.append(
                 UpdateOne(
-                    {"habit_id": habit_id, "user_id": user_id, "date": today},
+                    {"habit_id": habit_id, "user_id": user_id, "date": today_datetime},
                     {"$setOnInsert": {"completed": False}},
                     upsert=True
                 )

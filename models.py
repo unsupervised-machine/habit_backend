@@ -192,7 +192,7 @@ class CompletionCreate(BaseModel):
                 "habit_id": "066de609-b04a-4b30-b46c-32537c7f1f6e",
                 "user_id": "a77de609-c04a-5b30-c46c-32537c7f2g7f",
                 "date": "2025-02-25",
-                "completed": True
+                "completed": False
             }
         }
 
