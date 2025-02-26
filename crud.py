@@ -4,6 +4,8 @@ from pymongo import DESCENDING, UpdateOne
 from pymongo.errors import DuplicateKeyError
 from datetime import date as _date
 from datetime import timedelta
+from bson import ObjectId
+
 
 from db import users_collection, habits_collection, completions_collection
 from models import UserCreate, UserUpdate
@@ -30,7 +32,7 @@ def create_user(user: UserCreate):
 def get_user(user_id: str):
     try:
         # Retrieve the user document from the collection.
-        user = users_collection.find_one({"_id": user_id})
+        user = users_collection.find_one({"_id": ObjectId(user_id)})
         if user is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found.")
         return jsonable_encoder(user)
@@ -46,10 +48,10 @@ def update_user(user_id: str, user: UserUpdate):
 
     try:
         # Perform the update using the $set operator to update only provided fields.
-        result = users_collection.update_one({"_id": user_id}, {"$set": update_data})
+        result = users_collection.update_one(filter={"_id": ObjectId(user_id)}, update={"$set": update_data})
         if result.matched_count == 0:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found.")
-        return users_collection.find_one({"_id": user_id})
+        return users_collection.find_one(filter={"_id": ObjectId(user_id)})
 
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="An error occurred while updating the user.")
@@ -57,7 +59,7 @@ def update_user(user_id: str, user: UserUpdate):
 
 def delete_user(user_id: str):
     try:
-        result = users_collection.delete_one({"_id": user_id})
+        result = users_collection.delete_one(filter={"_id": ObjectId(user_id)})
         if result.deleted_count == 0:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found.")
         return {"message": "User deleted successfully."}
@@ -74,7 +76,7 @@ def create_habit(habit: HabitCreate):
 
     # Find the current highest sort_index
     max_sort_index = users_collection.find_one(
-        filter={"user_id": habit_data["user_id"]},
+        filter={"user_id": ObjectId(habit_data["user_id"])},
         sort=[("sort_index", DESCENDING)],
         projection={"sort_index": 1}
     )
@@ -96,7 +98,7 @@ def create_habit(habit: HabitCreate):
 def get_user_habits(user_id: str):
     try:
         habits = habits_collection.find(
-            filter={"user_id": user_id},
+            filter={"user_id": ObjectId(user_id)},
             sort=[("sort_index", DESCENDING)],
         )
         return jsonable_encoder(habits)
@@ -108,7 +110,7 @@ def get_user_habits(user_id: str):
 def get_habit(habit_id: str):
     try:
         habit = habits_collection.find(
-            filter={"habit_id": habit_id},
+            filter={"habit_id": ObjectId(habit_id)},
             sort=[("sort_index", DESCENDING)],
         )
         return jsonable_encoder(habit)
@@ -123,10 +125,10 @@ def update_habit(habit_id: str, habit: HabitUpdate):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No update data provided.")
 
     try:
-        result = habits_collection.update_one({"_id": habit_id}, {"$set": update_data})
+        result = habits_collection.update_one(filter={"_id": ObjectId(habit_id)}, update={"$set": update_data})
         if result.matched_count == 0:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Habit not found.")
-        return habits_collection.find_one({"_id": habit_id})
+        return habits_collection.find_one(filter={"_id": ObjectId(habit_id)})
 
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="An error occurred while updating the habit.")
@@ -134,7 +136,7 @@ def update_habit(habit_id: str, habit: HabitUpdate):
 
 def delete_habit(habit_id: str):
     try:
-        result = habits_collection.delete_one({"_id": habit_id})
+        result = habits_collection.delete_one(filter={"_id": ObjectId(habit_id)})
         if result.deleted_count == 0:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Habit not found.")
         return {"message": "Habit deleted successfully."}
@@ -176,10 +178,10 @@ def update_completion(completion_id: str, completion: CompletionUpdate):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No update data provided.")
 
     try:
-        result = completions_collection.update_one({"_id": completion_id}, {"$set": update_data})
+        result = completions_collection.update_one(filter={"_id": ObjectId(completion_id)}, update={"$set": update_data})
         if result.matched_count == 0:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Completion not found.")
-        return habits_collection.find_one({"_id": completion_id})
+        return habits_collection.find_one(filter={"_id": ObjectId(completion_id)})
 
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -236,7 +238,7 @@ def prepare_completions():
         today = _date.today()  # Get today's date
 
         # Fetch all habits
-        habits = habits_collection.find({}, {"_id": 1, "user_id": 1})
+        habits = habits_collection.find(filter={}, projection={"_id": 1, "user_id": 1})
 
         bulk_operations = []
 
@@ -247,8 +249,8 @@ def prepare_completions():
             # Upsert: Insert if not exists
             bulk_operations.append(
                 UpdateOne(
-                    {"habit_id": habit_id, "user_id": user_id, "date": today},
-                    {"$setOnInsert": {"completed": False}},
+                    filter={"habit_id": habit_id, "user_id": user_id, "date": today},
+                    update={"$setOnInsert": {"completed": False}},
                     upsert=True
                 )
             )
