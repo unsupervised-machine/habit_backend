@@ -9,3 +9,5 @@ db = client[DATABASE_NAME]
 
 # Collections
 users_collection = db["users"]
+habits_collection = db["habits"]
+completions_collection = db["completions"]
