@@ -22,9 +22,9 @@ def create_user(user: UserCreate):
         # Convert ObjectId to string before returning
         return {"id": str(result.inserted_id)}
     except DuplicateKeyError:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User with that id already exists.")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User with that email already exists.")
     except Exception as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="An error occurred while creating the user.")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"An error occurred: {str(e)}")
 
 
 def get_user(user_id: str):
