@@ -1,5 +1,4 @@
-from fastapi import APIRouter, Response, status
-
+from fastapi import APIRouter, status
 
 from models import User, UserCreate, UserUpdate
 from crud import create_user, get_user, update_user, delete_user

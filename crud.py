@@ -1,10 +1,9 @@
-from bson import ObjectId
 from fastapi import HTTPException, status
 from fastapi.encoders import jsonable_encoder
 from pymongo.errors import DuplicateKeyError
 
 from db import users_collection
-from models import User, UserCreate, UserUpdate
+from models import UserCreate, UserUpdate
 
 # ----------------------
 # User CRUD Operations
@@ -62,4 +61,6 @@ def delete_user(user_id: str):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error deleting user: {str(e)}"
         )
+
+
 
