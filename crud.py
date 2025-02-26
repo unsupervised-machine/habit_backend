@@ -35,7 +35,7 @@ def get_user(user_id: str):
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found.")
         return jsonable_encoder(user)
     except Exception as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="An error occurred while fetching the user.")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"An error occurred while fetching the user: {str(e)}")
 
 
 def update_user(user_id: str, user: UserUpdate):
