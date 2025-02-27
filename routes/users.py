@@ -2,7 +2,7 @@ from fastapi import APIRouter, status
 
 from models import User, UserCreate, UserUpdate
 from crud import create_user, get_user, update_user, delete_user
-from crud import get_user_habits, get_user_habit_completions, get_user_habit_completion_streak
+from crud import get_user_habits, get_user_habit_completions, get_user_habit_completion_streak, get_user_dashboard_data
 
 
 router = APIRouter()
@@ -45,3 +45,10 @@ def get_user_habit_completions_route(user_id: str, habit_id: str):
 def get_user_habit_completion_streak_route(user_id: str, habit_id: str):
     result = get_user_habit_completion_streak(user_id, habit_id)
     return result
+
+
+@router.get(path="/{user_id}/dashboard", response_description="Get data required for dashboard.", status_code=status.HTTP_200_OK, response_model=list)
+def get_user_dashboard_data_route(user_id: str):
+    result = get_user_dashboard_data(user_id)
+    return result
+

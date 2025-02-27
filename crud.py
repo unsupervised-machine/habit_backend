@@ -107,6 +107,39 @@ def get_user_habits(user_id: str):
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="An error occurred while fetching the user's habits.")
 
 
+def get_user_dashboard_data(user_id: str):
+    """
+    Retrieves all active habits (not archived) for a given user_id and fetches their completion values for today's date.
+    :param user_id:
+    :return:
+    """
+    today_date = _date.today().strftime("%Y-%m-%d")
+
+    # Fetch all habits that are not archived for the given user_id
+    habits = list(habits_collection.find(filter={"user_id": user_id, "archived": {"$ne": True}}))
+
+    habit_ids = [habit["_id"] for habit in habits]
+
+    # pprint(habits)
+    # pprint(habit_ids)
+
+    # Fetch today's completions for the retrieved habit_ids
+    completions = completions_collection.find(filter={"habit_id": {"$in": habit_ids}, "date": today_date},
+                                      projection={"habit_id": 1, "completed": 1, "_id": 0})
+
+    # pprint(today_date_str)
+    # pprint(list(completions))
+
+    completion_map = {completion["habit_id"]: completion["completed"] for completion in completions}
+
+    # Attach completion values to habits
+    for habit in habits:
+        habit["completion_value"] = completion_map.get(habit["_id"], None)
+        habit["today_date"] = today_date
+
+    return habits
+
+
 
 def get_habit(habit_id: str):
     try:
@@ -246,8 +279,10 @@ def prepare_completions():
     # If a completion for today exists, it won’t be modified.
     # If a completion for today doesn’t exist, it creates a new one.
     try:
-        today = _date.today()  # Get today's date
-        today_datetime = datetime.now()
+        # today = _date.today()  # Get today's date
+        # today_datetime = datetime.now()
+        today_str = _date.today().strftime("%Y-%m-%d")
+
 
         # Fetch all habits
         habits = habits_collection.find({}, {"_id": 1, "user_id": 1})
@@ -261,7 +296,7 @@ def prepare_completions():
             # Upsert: Insert if not exists
             bulk_operations.append(
                 UpdateOne(
-                    {"habit_id": habit_id, "user_id": user_id, "date": today_datetime},
+                    {"habit_id": habit_id, "user_id": user_id, "date": today_str},
                     {"$setOnInsert": {"completed": False}},
                     upsert=True
                 )
