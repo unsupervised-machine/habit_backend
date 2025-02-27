@@ -1,6 +1,6 @@
 from fastapi import APIRouter, status
 
-from models import Completion, CompletionCreate, CompletionUpdate
+from models import Completion, CompletionCreate, CompletionUpdate, CompletionUpsert
 from crud import create_completion, get_completion, update_completion, upsert_completion, prepare_completions
 
 
@@ -31,7 +31,7 @@ def prepare_completions_route():
     return result
 
 
-@router.put(path="/upsert", response_description="Preforms a completion collection upsert using user_id and habit_id", status_code=status.HTTP_201_CREATED, response_model=dict)
-def upsert_completion_route(user_id, habit_id, date, completion_id: str=None, completed: bool=False):
-    result = upsert_completion(user_id, habit_id, date, completion_id, completed)
+@router.put(path="/upsert", response_description="Preforms a completion collection upsert using user_id, habit_id, and date", status_code=status.HTTP_201_CREATED, response_model=dict)
+def upsert_completion_route(completion: CompletionUpsert):
+    result = upsert_completion(completion)
     return result

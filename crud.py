@@ -12,7 +12,7 @@ from datetime import timedelta, datetime
 from db import users_collection, habits_collection, completions_collection
 from models import UserCreate, UserUpdate
 from models import HabitCreate, HabitUpdate
-from models import CompletionCreate, CompletionUpdate
+from models import CompletionCreate, CompletionUpdate, CompletionUpsert
 
 
 # TODO
@@ -226,27 +226,25 @@ def update_completion(completion_id: str, completion: CompletionUpdate):
                             detail="An error occurred while updating the completion.")
 
 
-def upsert_completion(user_id, habit_id, date, completion_id: str=None, completed: bool=False):
-    if not completion_id:
-        completion_id = str(uuid.uuid4())
+def upsert_completion(request: CompletionUpsert):
     timestamp = datetime.now()
 
     upsert_object = {
-        "habit_id": habit_id,
-        "user_id": user_id,
-        "date": date,
+        "habit_id": request.habit_id,
+        "user_id": request.user_id,
+        "date": request.date,
     }
 
     update_fields = {
         "$set": {
-            "completed": completed,
+            "completed": request.completed,
             "timestamp": timestamp
         }
     }
 
     result = completions_collection.update_one(upsert_object, update_fields, upsert=True)
 
-    return {"message": f"Attempted upsert with completion_id {completion_id}."}
+    return {"message": f"Attempted upsert with habit_id: {request.habit_id}, user_id: {request.user_id}, date {request.date}"}
 
 
 

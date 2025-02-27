@@ -206,3 +206,10 @@ class CompletionUpdate(BaseModel):
                 "completed": False
             }
         }
+
+
+class CompletionUpsert(BaseModel):
+    user_id: str
+    habit_id: str
+    date: str=str(_date)  # This ensures a YYYY-MM-DD format
+    completed: bool = False
