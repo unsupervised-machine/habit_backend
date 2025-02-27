@@ -3,7 +3,6 @@ from pprint import pprint
 
 from fastapi import HTTPException, status
 from fastapi.encoders import jsonable_encoder
-from pip._internal.commands import completion
 from pymongo import DESCENDING, UpdateOne
 from pymongo.errors import DuplicateKeyError
 from datetime import date as _date

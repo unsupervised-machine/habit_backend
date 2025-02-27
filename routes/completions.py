@@ -1,6 +1,6 @@
 from fastapi import APIRouter, status
 
-from models import Completion, CompletionCreate, CompletionUpdate, CompletionUpsert
+from models import CompletionCreate, CompletionUpdate, CompletionUpsert
 from crud import create_completion, get_completion, update_completion, upsert_completion, prepare_completions
 
 
