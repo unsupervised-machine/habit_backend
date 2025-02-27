@@ -110,6 +110,8 @@ def get_user_habits(user_id: str):
 def get_user_dashboard_data(user_id: str):
     """
     Retrieves all active habits (not archived) for a given user_id and fetches their completion values for today's date.
+
+    Make sure to run prepare_completions at least once a day to avoid null completed values.
     :param user_id:
     :return:
     """
@@ -120,21 +122,17 @@ def get_user_dashboard_data(user_id: str):
 
     habit_ids = [habit["_id"] for habit in habits]
 
-    # pprint(habits)
-    # pprint(habit_ids)
 
     # Fetch today's completions for the retrieved habit_ids
     completions = completions_collection.find(filter={"habit_id": {"$in": habit_ids}, "date": today_date},
                                       projection={"habit_id": 1, "completed": 1, "_id": 0})
 
-    # pprint(today_date_str)
-    # pprint(list(completions))
 
     completion_map = {completion["habit_id"]: completion["completed"] for completion in completions}
 
-    # Attach completion values to habits
+    # Attach completion values and date to habits
     for habit in habits:
-        habit["completion_value"] = completion_map.get(habit["_id"], None)
+        habit["completed"] = completion_map.get(habit["_id"], None)
         habit["today_date"] = today_date
 
     return habits
