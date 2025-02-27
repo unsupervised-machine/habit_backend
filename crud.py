@@ -12,6 +12,11 @@ from models import UserCreate, UserUpdate
 from models import HabitCreate, HabitUpdate
 from models import CompletionCreate, CompletionUpdate
 
+
+# TODO
+# Create a get current date function -> feed to front end
+
+
 # ----------------------
 # User CRUD Operations
 # ----------------------
