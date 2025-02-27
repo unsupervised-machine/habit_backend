@@ -245,7 +245,8 @@ def upsert_completion(user_id, habit_id, date, completion_id: str=None, complete
     }
 
     result = completions_collection.update_one(upsert_object, update_fields, upsert=True)
-    return {"message": f"Upsert preformed on {completion_id}"}
+
+    return {"message": f"Attempted upsert with completion_id {completion_id}."}
 
 
 
