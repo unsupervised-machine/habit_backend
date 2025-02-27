@@ -211,5 +211,5 @@ class CompletionUpdate(BaseModel):
 class CompletionUpsert(BaseModel):
     user_id: str
     habit_id: str
-    date: str=str(_date)  # This ensures a YYYY-MM-DD format
+    date: str=str(_date.today())  # This ensures a YYYY-MM-DD format
     completed: bool = False
