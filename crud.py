@@ -1,7 +1,9 @@
+import uuid
 from pprint import pprint
 
 from fastapi import HTTPException, status
 from fastapi.encoders import jsonable_encoder
+from pip._internal.commands import completion
 from pymongo import DESCENDING, UpdateOne
 from pymongo.errors import DuplicateKeyError
 from datetime import date as _date
@@ -201,7 +203,6 @@ def get_completion(completion_id: str):
     try:
         completion = completions_collection.find_one(
             filter={"_id": completion_id},
-            # sort=[("sort_index", DESCENDING)],
         )
         return jsonable_encoder(completion)
     except Exception as e:
@@ -211,13 +212,11 @@ def get_completion(completion_id: str):
 
 def update_completion(completion_id: str, completion: CompletionUpdate):
     update_data = completion.model_dump(exclude_unset=True)
-    pprint(update_data)
     if not update_data:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No update data provided.")
 
     try:
         result = completions_collection.update_one({"_id": completion_id}, {"$set": update_data})
-        pprint(result)
         if result.matched_count == 0:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Completion not found.")
         return completions_collection.find_one({"_id": completion_id})
@@ -225,6 +224,33 @@ def update_completion(completion_id: str, completion: CompletionUpdate):
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                             detail="An error occurred while updating the completion.")
+
+
+def upsert_completion(user_id, habit_id, date, completion_id: str=None, completed: bool=False):
+    if not completion_id:
+        completion_id = str(uuid.uuid4())
+    timestamp = datetime.now()
+
+    upsert_object = {
+        "habit_id": habit_id,
+        "user_id": user_id,
+        "date": date,
+    }
+
+    update_fields = {
+        "$set": {
+            "completed": completed,
+            "timestamp": timestamp
+        }
+    }
+
+    result = completions_collection.update_one(upsert_object, update_fields, upsert=True)
+    return {"message": f"Upsert preformed on {completion_id}"}
+
+
+
+
+
 
 
 def get_user_habit_completions(user_id: str, habit_id: str):
@@ -246,8 +272,6 @@ def get_user_habit_completion_streak(user_id: str, habit_id: str):
         today = _date.today()  # Get today's date (date object)
 
         # Fetch completions sorted by date (most recent first)
-        pprint(user_id)
-        pprint(habit_id)
         completions = completions_collection.find(
             {"habit_id": habit_id, "user_id": user_id, "completed": True},
             sort=[("date", DESCENDING)]
