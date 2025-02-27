@@ -35,7 +35,6 @@ def get_user(user_id: str):
     try:
         # Retrieve the user document from the collection.
         user = users_collection.find_one({"_id": user_id})
-        pprint(user)
         if user is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found.")
         return jsonable_encoder(user)
@@ -270,13 +269,11 @@ def get_user_habit_completion_streak(user_id: str, habit_id: str):
             {"habit_id": habit_id, "user_id": user_id, "completed": True},
             sort=[("date", DESCENDING)]
         )
-        pprint(completions)
 
         streak = 0
         expected_date = today  # Start checking from today
 
         for completion in completions:
-            pprint(completion)
             completion_date = completion["date"]
             if isinstance(completion_date, str):
                 completion_date = datetime.strptime(completion_date, "%Y-%m-%d").date()
