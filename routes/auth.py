@@ -14,12 +14,6 @@ from password_tools import create_access_token
 router = APIRouter()
 
 
-@router.get(path="/email/{email}", response_description="Retrieve user details by email", response_model=User, status_code=status.HTTP_200_OK)
-def get_user_by_email_route(email: str):
-    # Example: /auth/email/test4@gmail.com
-    return get_user_by_email(email)
-
-
 @router.post("/register")
 def register(user: UserCreate):
     return register_user(user)
