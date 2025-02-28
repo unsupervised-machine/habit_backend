@@ -394,10 +394,16 @@ def prepare_completions():
                 )
             )
 
+        inserted_count = 0
         if bulk_operations:
-            completions_collection.bulk_write(bulk_operations)
+            result = completions_collection.bulk_write(bulk_operations)
+            inserted_count = result.inserted_count
 
-        return {"message": "Today's completions prepared successfully."}
+
+        return {
+            "message": "Today's completions prepared successfully.",
+            "inserted_count": inserted_count
+        }
 
     except Exception as e:
         raise HTTPException(
