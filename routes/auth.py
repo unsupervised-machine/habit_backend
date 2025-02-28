@@ -23,6 +23,11 @@ def register(user: UserCreate):
 
 @router.post("/token")
 def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()) -> Token:
+    """
+    OAuth2 compatible token login, return an access token for future requests (send to front end to hold on to)
+    :param form_data:
+    :return:
+    """
     # OAuth2PasswordRequestForm expects "username" but we will treat it as email
     user = authenticate_user(form_data.username, form_data.password)
     if not user:
@@ -42,6 +47,11 @@ def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()) -> 
 async def read_users_me(
     current_user: Annotated[User, Depends(get_current_user)],
 ):
+    """
+    Get details of current logged in user (requires token auth)
+    :param current_user:
+    :return:
+    """
     return current_user
 
 
