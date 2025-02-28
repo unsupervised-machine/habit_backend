@@ -33,12 +33,7 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None):
 
 def decode_token(token):
     payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-    # payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM], options={"verify_exp": False})
     return payload
 
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/token")
-
-
-# if __name__ == "__main__":
-#     return get_password_hash("hash_password_example")
