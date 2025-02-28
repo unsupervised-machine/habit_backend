@@ -6,8 +6,16 @@ from pydantic import BaseModel, Field, EmailStr
 from bson import ObjectId
 
 
-def object_id_str(value: ObjectId) -> str:
-    return str(value)
+# def object_id_str(value: ObjectId) -> str:
+#     return str(value)
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+
+
+class TokenData(BaseModel):
+    email: str | None = None
 
 
 class User(BaseModel):

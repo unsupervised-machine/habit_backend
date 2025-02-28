@@ -1,17 +1,61 @@
 import uuid
 from pprint import pprint
 
-from fastapi import HTTPException, status
+from fastapi import HTTPException, status, Depends
 from fastapi.encoders import jsonable_encoder
 from pymongo import DESCENDING, UpdateOne
 from pymongo.errors import DuplicateKeyError
 from datetime import date as _date
 from datetime import timedelta, datetime
+from jwt.exceptions import InvalidTokenError
+from typing import Annotated
+
 
 from db import users_collection, habits_collection, completions_collection
-from models import UserCreate, UserUpdate
+from password_tools import verify_password, create_access_token, decode_token, oauth2_scheme
+from models import TokenData
+from models import User, UserCreate, UserUpdate
 from models import HabitCreate, HabitUpdate
 from models import CompletionCreate, CompletionUpdate, CompletionUpsert
+
+
+# ----------------------
+# User Auth Operations
+# ----------------------
+def authenticate_user(email: str, password: str):
+    user = get_user_by_email(email=email)
+    if not user:
+        return False
+    if not verify_password(password, user.hashed_password):
+        return False
+    return user
+
+
+def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
+    """Extracts the user from a JWT token without OAuth2 dependency."""
+
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+
+    try:
+        # print(f"Received token: {token}")  # Debugging: Print the token
+
+        payload = decode_token(token)
+        # print(f"Decoded payload: {payload}")
+
+        email = payload.get("sub")
+        if email is None:
+            raise credentials_exception
+        token_data = TokenData(email=email)
+    except InvalidTokenError:
+        raise credentials_exception
+    user = get_user_by_email(email=token_data.email)
+    if user is None:
+        raise credentials_exception
+    return user
 
 
 # ----------------------
@@ -40,6 +84,18 @@ def get_user(user_id: str):
         return jsonable_encoder(user)
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"An error occurred while fetching the user: {str(e)}")
+
+
+def get_user_by_email(email: str):
+    try:
+        # Retrieve the user document from the collection.
+        user = users_collection.find_one({"email": email})
+        if user is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found.")
+        return User(**jsonable_encoder(user))
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"An error occurred while fetching the user: {str(e)}")
+
 
 
 def update_user(user_id: str, user: UserUpdate):
