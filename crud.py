@@ -103,10 +103,14 @@ def get_user(user_id: str):
 def get_user_by_email(email: str):
     try:
         # Retrieve the user document from the collection.
-        user = users_collection.find_one({"email": email})
-        if user is None:
+        user_data = users_collection.find_one({"email": email})
+        if user_data is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found.")
-        return User(**jsonable_encoder(user))
+
+        # Convert ObjectId to string
+        user_data["_id"] = str(user_data["_id"])
+
+        return User(**jsonable_encoder(user_data))
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"An error occurred while fetching the user: {str(e)}")
 

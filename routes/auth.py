@@ -28,8 +28,8 @@ def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()) -> 
     :param form_data:
     :return:
     """
-    # OAuth2PasswordRequestForm expects "username" but we will treat it as email
-    user = authenticate_user(form_data.username, form_data.password)
+    # OAuth2PasswordRequestForm expects "username" but we give it an email
+    user = authenticate_user(email=form_data.username, password=form_data.password)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -40,6 +40,8 @@ def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()) -> 
     access_token = create_access_token(
         data={"sub": user.email}, expires_delta=access_token_expires
     )
+    test = Token(access_token=access_token, token_type="bearer")
+    print(test.access_token)
     return Token(access_token=access_token, token_type="bearer")
 
 
