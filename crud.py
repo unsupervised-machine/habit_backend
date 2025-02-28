@@ -12,7 +12,7 @@ from typing import Annotated
 
 
 from db import users_collection, habits_collection, completions_collection
-from password_tools import verify_password, create_access_token, decode_token, oauth2_scheme
+from password_tools import verify_password, create_access_token, decode_token, oauth2_scheme, get_password_hash
 from models import TokenData
 from models import User, UserCreate, UserUpdate
 from models import HabitCreate, HabitUpdate
@@ -22,7 +22,25 @@ from models import CompletionCreate, CompletionUpdate, CompletionUpsert
 # ----------------------
 # User Auth Operations
 # ----------------------
+def register_user(user_form: UserCreate):
+    user_data = {
+        **user_form.model_dump(exclude={"password"}),
+        "hashed_password": get_password_hash(user_form.password)
+    }
+    result = users_collection.insert_one(user_data)
+    return {"id": str(result.inserted_id)}
+
+
+
+
+
 def authenticate_user(email: str, password: str):
+    """
+    uses user email and password to fetch user details (including _id)
+    :param email:
+    :param password:
+    :return:
+    """
     user = get_user_by_email(email=email)
     if not user:
         return False
@@ -41,11 +59,7 @@ def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
     )
 
     try:
-        # print(f"Received token: {token}")  # Debugging: Print the token
-
         payload = decode_token(token)
-        # print(f"Decoded payload: {payload}")
-
         email = payload.get("sub")
         if email is None:
             raise credentials_exception

@@ -7,7 +7,7 @@ from typing import Annotated
 
 
 from config import ACCESS_TOKEN_EXPIRE_MINUTES
-from crud import authenticate_user, get_current_user
+from crud import authenticate_user, get_current_user, register_user
 from models import User, UserCreate, Token
 from password_tools import create_access_token
 
@@ -18,8 +18,7 @@ router = APIRouter()
 
 @router.post("/register")
 def register(user: UserCreate):
-    raise HTTPException(status_code=status.HTTP_418_IM_A_TEAPOT, detail="Not implemented")
-
+    return register_user(user)
 
 
 @router.post("/token")
