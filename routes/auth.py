@@ -5,13 +5,19 @@ from typing import Annotated
 
 
 from config import ACCESS_TOKEN_EXPIRE_MINUTES
-from crud import authenticate_user, get_current_user, register_user
+from crud import authenticate_user, get_current_user, register_user, get_user_by_email
 from models import User, UserCreate, Token
 from password_tools import create_access_token
 
 
 
 router = APIRouter()
+
+
+@router.get(path="/email/{email}", response_description="Retrieve user details by email", response_model=User, status_code=status.HTTP_200_OK)
+def get_user_by_email_route(email: str):
+    # Example: /auth/email/test4@gmail.com
+    return get_user_by_email(email)
 
 
 @router.post("/register")
