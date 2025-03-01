@@ -28,7 +28,6 @@ def register_user(user_form: UserCreate):
         "hashed_password": get_password_hash(user_form.password)
     }
     user_data_json = jsonable_encoder(user_data)
-    print(user_data_json)
     result = users_collection.insert_one(user_data_json)
     return {"id": str(result.inserted_id)}
 
@@ -81,8 +80,11 @@ def create_user(user: UserCreate):
     # Convert the Pydantic model to a JSON-serializable dict.
     user_data = jsonable_encoder(user)
 
-    try:
+    # Rename the key "password" to "hashed_password"
+    if "password" in user_data:
+        user_data["hashed_password"] = user_data.pop("password")
 
+    try:
         result = users_collection.insert_one(user_data)
         # Convert ObjectId to string before returning
         return {"id": str(result.inserted_id)}
