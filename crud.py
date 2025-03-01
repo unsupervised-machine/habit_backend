@@ -24,10 +24,12 @@ from models import CompletionCreate, CompletionUpdate, CompletionUpsert
 # ----------------------
 def register_user(user_form: UserCreate):
     user_data = {
-        **user_form.model_dump(exclude={"password"}),
+        **user_form.model_dump(exclude={"password"}, by_alias=True),
         "hashed_password": get_password_hash(user_form.password)
     }
-    result = users_collection.insert_one(user_data)
+    user_data_json = jsonable_encoder(user_data)
+    print(user_data_json)
+    result = users_collection.insert_one(user_data_json)
     return {"id": str(result.inserted_id)}
 
 
@@ -80,6 +82,7 @@ def create_user(user: UserCreate):
     user_data = jsonable_encoder(user)
 
     try:
+
         result = users_collection.insert_one(user_data)
         # Convert ObjectId to string before returning
         return {"id": str(result.inserted_id)}
