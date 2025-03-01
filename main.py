@@ -1,8 +1,12 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from mangum import Mangum
 from routes import users, auth, habits, completions
 
+
 app = FastAPI()
+handler = Mangum(app)
+
 
 app.add_middleware(
     CORSMiddleware,
